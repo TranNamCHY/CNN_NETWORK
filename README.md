@@ -30,8 +30,7 @@ you could find the detailed instruction at my repository: https://github.com/Tra
 Then, run it with no arguments:
 
 ```bash
-$ python cnn.py
-$ python cnn_keras.py
+$ python test_fpga.py
 ```
 
 
