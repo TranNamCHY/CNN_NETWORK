@@ -25,7 +25,7 @@ Next, if you just want to run by CPU, simply run with:
 $ python test_cpu.py
 ```
 In case you want to run convolution and maxpooling by FPGA mode, you first need to install a device driver for the Convolution and Maxpooling FPGA module, 
-you could find it at my repo: 
+you could find it at my repo: (https://github.com/TranNamCHY/Convolution_Driver)
 Then, run it with no arguments:
 
 ```bash
@@ -37,4 +37,4 @@ $ python cnn_keras.py
 
 ## More
 
-You may also be interested in [a Neural Network implemented from scratch in Python](https://github.com/vzhou842/neural-network-from-scratch), which was written for my [introduction to Neural Networks](https://victorzhou.com/blog/intro-to-neural-networks/).
+You may also be interested inatch in Python](https://github.com/vzhou842/neural-network-from-scratch), which was written for my [introduction to Neural Networks](https://victorzhou.com/blog/intro-to-neural-networks/).
