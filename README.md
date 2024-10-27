@@ -25,7 +25,7 @@ Next, if you just want to run by CPU, simply run with:
 $ python test_cpu.py
 ```
 In case you want to run convolution and maxpooling by FPGA mode, you first need to install a device driver for the Convolution and Maxpooling FPGA module, 
-you could find the detail instruction at my repository: https://github.com/TranNamCHY/Convolution_Driver.
+you could find the detailed instruction at my repository: https://github.com/TranNamCHY/Convolution_Driver.
 
 Then, run it with no arguments:
 
