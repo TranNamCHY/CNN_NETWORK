@@ -17,8 +17,15 @@ pip install numpy
 pip install matplotlib
 ```
 **Note: on Zynq7000, you may not be able to install numpy or matplotlib by pip package, try to find a prebuilt rootfs with numpy or matplotlib 
-installed or add nunpy package to rootfs by petalinux.
+installed or add numpy package to rootfs by petalinux.
 
+Next, if you just want to run by CPU, simply run with:
+
+```bash
+$ python test_cpu.py
+```
+In case you want to run convolution and maxpooling by FPGA mode, you first need to install a device driver for the Convolution and Maxpooling FPGA module, 
+you could find it at my repo: 
 Then, run it with no arguments:
 
 ```bash
