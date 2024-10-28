@@ -42,4 +42,4 @@ The CNN network designed in two testbench has architecture: Con3x3(16 filters), 
 
 Training set include 500 face image of 16 people classified into 16 label, each label represent a person. The CNN was trained to classify the face in input image to one of 16 label.
 
-The testing set include 160 face image, each label has 10.
+The testing set include 160 face image, each label has 10, used to evaluate the accurancy of the final model.
