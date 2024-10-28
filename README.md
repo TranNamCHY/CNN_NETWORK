@@ -10,7 +10,8 @@ Especially, The Convolution2D and Maxpoolng was designed to run by both way: Usi
 ## Usage
 This CNN network can be used both on Personal computer and Zynq7000 SOC device. Obviously, when running on PC, you can only use the "CPU"
 functionality of Convolution2D and Maxpooling layer.
-Install dependencies (Required both on PC and Zynq7000):
+
+First, Install dependencies (Required both on PC and Zynq7000):
 
 ```bash
 pip install numpy
