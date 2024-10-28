@@ -47,19 +47,15 @@ face_train_image = np.load('train_image.npy')
 face_train_label = np.load('train_label.npy')
 train_images = np.load('train_images.npy')
 train_labels = np.load('train_labels.npy')
-test_images = np.load('test_images.npy')
-test_labels = np.load('test_labels.npy')
+face_test_images = np.load('test_image.npy')
+face_test_labels = np.load('test_label.npy')
 idex_face_train_label = np.load('idex_train_label.npy')
 new_face_train_image = np.load('new_face_train_image.npy')
 new_idex_face_train_label = np.load('new_idex_face_train_label.npy')
 train_images = train_images[0:1000].astype(np.float32)
-test_images = test_images[0:1000].astype(np.float32)
 train_images = np.expand_dims(train_images, axis = -1)
-test_images = np.expand_dims(test_images, axis = -1)
 train_labels = train_labels[0:1000]
 test_image = np.zeros((28,28,1), dtype=np.float32)
-
-test_labels = test_labels[0:1000]
 test_image = train_images[0].astype(np.float32)
 
 Sequential = []
@@ -155,10 +151,28 @@ def np_display(image):
   plt.colorbar()  # Show color scale (optional)
   plt.show()
 
+def test_accurancy_model(Sequential, testing_image, testing_label):
+  correct_answer = 0
+  total = 0
+  for i in range(0,len(testing_image)):
+    _,_,acc = forward(testing_image[i],testing_label[i],Sequential)
+    total += 1
+    correct_answer += acc
+  return correct_answer/total
+
+''' new_face_test_labels = np.zeros((64)).astype(np.int32)
+for i in range(0,64):
+  #new_face_test_labels[i] = np.amax(face_test_labels[i,0,:])
+  #print(face_test_labels[i,0,:])
+  new_face_test_labels = np.argmax(face_test_labels[i,0,:], axis=(0))
+np.save('test_label.npy',new_face_test_labels) '''
+#test_accurancy_model(Sequential=Sequential, testing_image=face_test_images, testing_label=face_test_labels)
 print('Starting Training !')
 mark_time = time.time()
 fit(Sequential=Sequential,train_images=new_face_train_image,train_labels=new_idex_face_train_label,epoch=10)
 print("Traing time take: ", time.time() - mark_time)
+print("Accurancy on testing set: ",test_accurancy_model(Sequential=Sequential, testing_image=face_test_images, testing_label=face_test_labels))
+
 conv.free_resource()
 second_conv.free_resource()
 
