@@ -36,6 +36,8 @@ $ python test_fpga.py
 
 
 
-## More
+## About CNN
 
-You may also be interested inatch in Python](https://github.com/vzhou842/neural-network-from-scratch), which was written for my [introduction to Neural Networks](https://victorzhou.com/blog/intro-to-neural-networks/).
+The CNN network designed in two testbench has architecture: Con3x3(16 filters), Maxpooling2x2, Con3x3(16 filters), Maxpooling2x2, Flatten, Dense(16 neurons), Softmax
+Training set include 500 face image of 16 people classified into 16 label, each label represent a person. The CNN was trained to classify the face in input image to one of 16 label.
+The testing set include 160 face image, each label has 10.
