@@ -46,4 +46,4 @@ The testing set include 160 face image, each label has 10, used to evaluate the 
 
 ![Training process](./traing.png)
 
-Because the traing algorithm is just gradient descent, the final accurancy of traing step barely reach to 100%. 
+Because the traing algorithm is just gradient descent, the final accuracy of traing step barely reach to 100%. 
