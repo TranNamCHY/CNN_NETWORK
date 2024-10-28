@@ -45,3 +45,5 @@ Training set include 500 face image of 16 people classified into 16 label, each 
 The testing set include 160 face image, each label has 10, used to evaluate the accurancy of the final model.
 
 ![Training process](./traing.png)
+
+Because the traing algorithm is just gradient descent, the final accurancy of traing step barely reach to 100%. 
