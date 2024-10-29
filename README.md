@@ -28,6 +28,9 @@ $ python test_cpu.py
 In case you want to run convolution and maxpooling by FPGA mode, you first need to install a device driver for the Convolution and Maxpooling FPGA module, 
 you could find the detailed instruction at my repository: https://github.com/TranNamCHY/Convolution_Driver.
 
+**Note: if you got the error message like: "segmentation fault" when run the test, you may need to recompile the "matrix_ultility.c" by yourself, visit
+my repository: https://github.com/TranNamCHY/Convolution_Driver for more detail
+
 Then, run it with no arguments:
 
 ```bash
