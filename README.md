@@ -1,6 +1,6 @@
 # A Convolution Neural Network (CNN) From Scratch
 This project implements a simple CNN network with all basic Layer for a face classification like:
-- Convolution2D (only support 3x3 kernel side).
+- Convolution2D (only support 3x3 kernel size).
 - Maxpoolng (only support 2x2 pool size).
 - Flatten
 - Dense (Fully Connected).
