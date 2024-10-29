@@ -5,6 +5,7 @@ This project implements a simple CNN network with all basic Layer for a face cla
 - Flatten
 - Dense (Fully Connected).
 - SoftMax.
+
 Especially, The Convolution2D and Maxpoolng was designed to run by both way: Using the CPU and using the specialized desgined FPGA module. 
 
 ## Usage
