@@ -62,3 +62,6 @@ class Dense(Layer):
   def save_weight(self):
     np.save(self.name +  "_weight", self.weights)
     np.save(self.name +  "_bias", self.biases)
+  def load_weight_by_name(self):
+    self.weights = np.load(self.name +  "_weight.npy")
+    self.biases = np.load(self.name +  "_bias.npy")

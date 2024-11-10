@@ -7,3 +7,5 @@ class Layer:
         print("8bit Forward func not been override at " + self.name + " layer !.")
     def save_weight(self):
         return
+    def load_weight_by_name(self):
+        return

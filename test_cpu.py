@@ -146,6 +146,9 @@ def save_weight(Sequential):
    for layer in Sequential:
       layer.save_weight()
 
+def load_weight(Sequential):
+  for layer in Sequential:
+     layer.load_weight_by_name()
 def np_display(image):
   plt.imshow(image.astype(np.int32))  # 'gray' colormap for grayscale images
   plt.colorbar()  # Show color scale (optional)
@@ -167,11 +170,34 @@ for i in range(0,64):
   new_face_test_labels = np.argmax(face_test_labels[i,0,:], axis=(0))
 np.save('test_label.npy',new_face_test_labels) '''
 #test_accurancy_model(Sequential=Sequential, testing_image=face_test_images, testing_label=face_test_labels)
+''''
+  This for traning.
+'''
 print('Starting Training !')
 mark_time = time.time()
 fit(Sequential=Sequential,train_images=new_face_train_image,train_labels=new_idex_face_train_label,epoch=10)
 print("Traing time take: ", time.time() - mark_time)
 print("Accurancy on testing set: ",test_accurancy_model(Sequential=Sequential, testing_image=face_test_images, testing_label=face_test_labels))
+save_weight(Sequential)
+
+''''
+  Used for testing a pre train model.
+'''
+'''load_weight(Sequential)
+
+np_display(face_test_images[6])
+out = face_test_images[6]
+out = out/255 - 0.5
+for layer in Sequential:
+    out = layer.forward(out)
+np_display(out[:,:,3])
+
+np_display(face_test_images[7])
+out = face_test_images[7]
+out = out/255 - 0.5
+for layer in Sequential:
+    out = layer.forward(out)
+np_display(out[:,:,3]) '''
 
 conv.free_resource()
 second_conv.free_resource()

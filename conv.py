@@ -75,9 +75,6 @@ class Conv3x3(Layer):
       del self.backprop_src_matrix
       del self.backprop_dest_matrix
   def signal_handler(self, sigunum,frame):
-    #print("Interrupt signal caught! Exiting gracefully...")
-    #print("Signal_num: ")
-    #print(self.num_signal)
     self.wait_flag = True
 
   def register_signal_handle(self):
@@ -413,6 +410,8 @@ class Conv3x3(Layer):
       return self.test_fpga_forward(input)
   def save_weight(self):
     np.save(self.name + "_weight",self.filters)
+  def load_weight_by_name(self):
+    self.filters = np.load(self.name + "_weight.npy")
   def float_forward(self, input):
     self.last_input = input
     ''' if not hasattr(self,'src_matrix'):
@@ -575,67 +574,7 @@ class Conv3x3(Layer):
     return self.rotated_filters
   def add_zeros_padding(self,filter, num_filter):
     return np.pad(filter, ((2, 2), (2, 2), (0, 0)), mode='constant')
-  def t_backprop(self, d_L_d_out, learn_rate):
-    '''
-    Performs a backward pass of the conv layer.
-    - d_L_d_out is the loss gradient for this layer's outputs.
-    - learn_rate is a float.
-    '''
-    #if self.need_caculate_backprop == False:
-    #  return None
-    mark_time = time.time()
-    #d_L_d_filters = np.zeros(self.filters.shape)
-    test_d_L_d_filters = np.zeros(self.filters.shape)
-    #print(d_L_d_out.shape)
-    tempt_sum = 0
-    for im_region, check_im_region, i, j in self.test_iterate_regions(self.last_input,self.num_filters):
-        #print(self.output_num_chan)
-        #print(im_region.shape)
-        #print(d_L_d_out.shape)
-      # im_region has shape(3, 3, num_chan.) was cut from the last input image.
-      #for f in range(self.num_filters):
-        #print(d_L_d_filters[f,:,:,:].shape)
-        #print(im_region.shape)
-        #d_L_d_filters[f,:,:,:] has shape(3,3,num_chan)
-        #d_L_d_out has shape()
-        #
-        test_time = time.time()
-        #print(im_region.shape)
-        #print([len(d_L_d_filters[f,:,0,0]),len(d_L_d_filters[f,0,:,0]),len(d_L_d_filters[f,0,0,:])])
-        tempt = (d_L_d_out[i, j, :] * im_region)
-        #print(tempt.shape)
-        t = np.transpose(tempt, (3, 0, 1, 2))
-        #print(t.shape)
-        #print(self.output_num_chan)
-        #print(d_L_d_filters[:,:,:,:].shape)
-        #print(t.shape)
-        test_d_L_d_filters[:,:,:,:] += t
-        #d_L_d_out[i, j, f] * im_region
-        ''' for f in range(self.num_filters):
-        #print(d_L_d_filters[f,:,:,:].shape)
-        #print(im_region.shape)
-        #d_L_d_filters[f,:,:,:] has shape(3,3,num_chan)
-        #d_L_d_out has shape()
-          d_L_d_filters[f,:,:,:] += d_L_d_out[i, j, f] * check_im_region  '''
-    ''' print("test_d_L_d_filters: ")
-    print(test_d_L_d_filters[0,:,0,0])
-    print("d_L_d_filters: ")
-    print(d_L_d_filters[0,:,0,0])
-    #print("Efficient time: ") '''
-    #print(tempt_sum)
-    # Update filters
-    self.filters[:,:,:,:] -= learn_rate * test_d_L_d_filters[:,:,:,:]
-    #print("weight modification take: ")
-    #print(time.time() - mark_time)
-    self.rotate_180degree(self.filters, self.num_filters)
-    # We aren't returning anything here since we use Conv3x3 as the first layer in our CNN.
-    # Otherwise, we'd need to return the loss gradient for this layer's inputs, just like every
-    # other layer in our CNN. ftest_8bit_caculate_previos_error
-    #padded_filter = self.add_zeros_padding(d_L_d_out, self.num_filters)
-    #print("Weight modification time: ")
-    #print(time.time() - mark_time)
-    return self.test_8bit_caculate_previos_error(d_L_d_out)
-
+ 
   def sliding_window_view_4d_reverse(self,arr, window_shape):
     """
     Create a sliding window view of a 4D input array along the 1st and 2nd dimensions.
@@ -680,15 +619,11 @@ class Conv3x3(Layer):
     if self.need_caculate_backprop == False:
       return None
     mark_time = time.time()
-    #d_L_d_filters = np.zeros(self.filters.shape)
     d_L_d_filters = np.zeros(self.filters.shape)
     tempt_image = np.zeros(self.last_input.shape, dtype = np.float32)
     tempt_image = self.last_input
     expanded_tempt_image = np.expand_dims(tempt_image, axis=3)
     expanded_tempt_image = np.tile(expanded_tempt_image, (1, 1, 1, self.num_filters))
-    #mark_time = time.time()
-    #windows = np.lib.stride_tricks.sliding_window_view(expanded_tempt_image, (3, 3), axis=(0, 1))
-    #windows = np.transpose(windows, (0,1,4,5,2,3))
     windows = self.sliding_window_view_4d_reverse(expanded_tempt_image,(3,3))
     #mark_time = time.time()
     tempt = windows * d_L_d_out[:, :, np.newaxis, np.newaxis, np.newaxis, :]
@@ -696,19 +631,12 @@ class Conv3x3(Layer):
     tempt = np.sum(tempt, axis=(0,1))
     #print(time.time() - mark_time)
     d_L_d_filters = np.transpose(tempt, (3,0,1,2))
-    #print(tempt_sum)
-    # Update filters
+    ''''
+      Update filters.
+    '''
     if self.need_update_weight == True:
       self.filters[:,:,:,:] -= learn_rate * d_L_d_filters[:,:,:,:]
-    #print("weight modification take: ")
-    #print(time.time() - mark_time)
     self.rotate_180degree(self.filters, self.num_filters)
-    # We aren't returning anything here since we use Conv3x3 as the first layer in our CNN.
-    # Otherwise, we'd need to return the loss gradient for this layer's inputs, just like every
-    # other layer in our CNN. ftest_8bit_caculate_previos_error
-    #padded_filter = self.add_zeros_padding(d_L_d_out, self.num_filters)
-    #print("Weight modification time: ")
-    #print(time.time() - mark_time)
     return self.test_8bit_caculate_previos_error(d_L_d_out)
 '''
   Test
