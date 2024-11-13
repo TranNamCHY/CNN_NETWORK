@@ -4,8 +4,13 @@ import ctypes
 class MaxPool2(Layer):
   # A Max Pooling layer using a pool size of 2.
 
-  def __init__(self, name):
+  def __init__(self, name, type_maxpool):
     super().__init__(name)
+    self.type_maxpool = type_maxpool
+    if self.type_maxpool == "float_forward":
+      self.backprop = self.float_backprop
+    if self.type_maxpool == "fpga_forward":
+      self.backprop = self.fpga_backprop
   def iterate_regions(self, image):
     '''
     Generates non-overlapping 2x2 image regions to pool over.
@@ -23,7 +28,13 @@ class MaxPool2(Layer):
     max_indices_flat = np.argmax((im_region.reshape(-1, im_region.shape[2])), axis=0)
     max_coords = np.unravel_index(max_indices_flat, (im_region.shape[0], im_region.shape[1]))
     return max_coords
-  def test_forward(self, input):
+  
+  def forward(self, input):
+    if self.type_maxpool == "float_forward":
+      return self.float_forward(input)
+    if self.type_maxpool == "fpga_forward":
+      return self.fpga_forward(input)
+  def float_forward(self, input):
     '''
     Performs a forward pass of the maxpool layer using the given input.
     Returns a 3d numpy array with dimensions (h / 2, w / 2, num_filters).
@@ -93,7 +104,7 @@ class MaxPool2(Layer):
     
     return pooled, final_coords
   
-  def forward(self, input):
+  def fpga_forward(self, input):
     '''
     Performs a forward pass of the maxpool layer using the given input.
     Returns a 3d numpy array with dimensions (h / 2, w / 2, num_filters).
@@ -102,6 +113,7 @@ class MaxPool2(Layer):
     self.last_input = input
     output, self.x_coordinate_matrix, self.y_coordinate_matrix = self.custom_maxpool_layer(input,2)
     return output
+  
   
   def custom_maxpool_layer(self, input_tensor_image, pool_size):
     lib = ctypes.CDLL('./libmatrix.so')
@@ -122,7 +134,7 @@ class MaxPool2(Layer):
         #final_result[:,:,num_chan] = tempt_result[:].reshape(int(image_height/pool_size), int(image_width/pool_size))
     return tempt_result.reshape(int(image_height/pool_size),int(image_width/pool_size),int(input_image_num_channel)), x_coordinate_matrix.reshape(int(image_height/pool_size),int(image_width/pool_size),int(input_image_num_channel)), y_coordinate_matrix.reshape(int(image_height/pool_size),int(image_width/pool_size),int(input_image_num_channel))
 
-  def test_backprop(self, d_L_d_out, learn_rate):
+  def float_backprop(self, d_L_d_out, learn_rate):
     '''
     Performs a backward pass of the maxpool layer.
     Returns the loss gradient for this layer's inputs.
@@ -143,7 +155,7 @@ class MaxPool2(Layer):
 
     return d_L_d_input
   
-  def backprop(self, d_L_d_out, learn_rate):
+  def fpga_backprop(self, d_L_d_out, learn_rate):
     '''
     Performs a backward pass of the maxpool layer.
     Returns the loss gradient for this layer's inputs.

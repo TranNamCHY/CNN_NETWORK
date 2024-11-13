@@ -64,14 +64,14 @@ conv = Conv3x3(num_filters=8,num_chan=3, name="First_Conv",type_conv="int8bit_fo
                , fd=None,src_buffer=None,dest_buffer=None,kernel_buffer=None,num_signal=SIG_TEST, need_caculate_backprop=False, need_update_weight=True)                  # 28x28x1 -> 26x26x16
 Sequential.append(conv)                                                                                                                                      # 64x64x3 -> 62x62x16
 
-pool = MaxPool2(name="First Maxpool")                  # 26x26x16 -> 13x13x16                                       
+pool = MaxPool2(name="First Maxpool", type_maxpool="fpga_forward")                  # 26x26x16 -> 13x13x16                                       
 Sequential.append(pool)                                # 62x62x16 -> 31x31x16
 
 second_conv = Conv3x3(num_filters=8,num_chan=8,name="Second_Conv",type_conv="int8bit_forward"
                       , fd=None,src_buffer=None,dest_buffer=None,kernel_buffer=None,num_signal=(SIG_TEST+1), need_caculate_backprop=True, need_update_weight=True) # 13x13x16 -> 11x11x16
 Sequential.append(second_conv)                                                                                                                     # 31x31x16 -> 29x29x16                                                                       
 
-second_pool = MaxPool2(name="Second Maxpool")  # 11x11x16 -> 5x5x16
+second_pool = MaxPool2(name="Second Maxpool", type_maxpool="fpga_forward")  # 11x11x16 -> 5x5x16
 Sequential.append(second_pool)                 # 29x29x16 -> 14x14x16
 
 flatten = Flatten(name="Flatten") # 5x5x16 -> 13*13*32
