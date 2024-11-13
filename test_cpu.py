@@ -60,14 +60,14 @@ test_image = train_images[0].astype(np.float32)
 
 Sequential = []
 
-conv = Conv3x3(num_filters=8,num_chan=3, name="First_Conv",type_conv="int8bit_forward"
+conv = Conv3x3(num_filters=16,num_chan=3, name="First_Conv",type_conv="new_conv"
                , fd=None,src_buffer=None,dest_buffer=None,kernel_buffer=None,num_signal=SIG_TEST, need_caculate_backprop=False, need_update_weight=True)                  # 28x28x1 -> 26x26x16
 Sequential.append(conv)                                                                                                                                      # 64x64x3 -> 62x62x16
 
 pool = MaxPool2(name="First Maxpool", type_maxpool="fpga_forward")                  # 26x26x16 -> 13x13x16                                       
 Sequential.append(pool)                                # 62x62x16 -> 31x31x16
 
-second_conv = Conv3x3(num_filters=8,num_chan=8,name="Second_Conv",type_conv="int8bit_forward"
+second_conv = Conv3x3(num_filters=16,num_chan=16,name="Second_Conv",type_conv="new_conv"
                       , fd=None,src_buffer=None,dest_buffer=None,kernel_buffer=None,num_signal=(SIG_TEST+1), need_caculate_backprop=True, need_update_weight=True) # 13x13x16 -> 11x11x16
 Sequential.append(second_conv)                                                                                                                     # 31x31x16 -> 29x29x16                                                                       
 
@@ -77,7 +77,7 @@ Sequential.append(second_pool)                 # 29x29x16 -> 14x14x16
 flatten = Flatten(name="Flatten") # 5x5x16 -> 13*13*32
 Sequential.append(flatten)        
 
-dense1 = Dense(input_len=14*14*8, num_neuron=16, name="Dense1", need_update = True) # 5*5*16 -> 64
+dense1 = Dense(input_len=14*14*16, num_neuron=16, name="Dense1", need_update = True) # 5*5*16 -> 64
 Sequential.append(dense1)
 
 t_softmax = tempt_Softmax(name="Softmax") # 10 -> 10

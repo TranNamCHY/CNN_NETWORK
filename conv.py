@@ -2,6 +2,7 @@ import numpy as np
 import ctypes
 from numpy.lib.stride_tricks import as_strided
 from Layer import Layer
+import time
 import signal
 import os
 import fcntl
@@ -67,6 +68,8 @@ class Conv3x3(Layer):
       self.used_convo_op = self.test_custom_conv2d
     if self.type_conv == "test_fpga_forward":
       self.used_convo_op = self.test_fpga_backprop_custom_conv2d_8bit
+    if self.type_conv == "new_conv":
+      self.used_convo_op  = self.new_conv_op
   def free_resource(self):
      if self.type_conv == "fpga_forward":
       del self.src_matrix
@@ -408,6 +411,8 @@ class Conv3x3(Layer):
       return self.float_forward(input)
     if self.type_conv  == "test_fpga_forward":
       return self.test_fpga_forward(input)
+    if self.type_conv ==  "new_conv":
+      return self.new_con_forward(input)
   def save_weight(self):
     np.save(self.name + "_weight",self.filters)
   def load_weight_by_name(self):
@@ -432,6 +437,9 @@ class Conv3x3(Layer):
     #print("After: ",self.filters)
     #print("diffrence: ",np.amax(self.filters - tempt))
     return t
+  def new_con_forward(self,input):
+    self.last_input = input
+    return self.new_conv_op(input, self.filters)
   def fpga_forward(self, input):
     self.last_input = input
     if not hasattr(self,'src_matrix'):
@@ -609,7 +617,42 @@ class Conv3x3(Layer):
 
     # Return the sliding window view using as_strided
     return as_strided(arr, shape=out_shape, strides=strides)
-  
+
+  def sliding_window_view_3d_reverse(self,arr, window_shape):
+    """
+    Create a sliding window view of a 4D input array along the 1st and 2nd dimensions.
+    
+    Parameters:
+        arr: The input 4D array (shape: (a, b, c, d)).
+        window_shape: Tuple specifying the shape of the sliding window for the 1st and 2nd dimensions.
+        
+    Returns:
+        A view of the array with sliding windows applied along the 1st and 2nd dimensions.
+    """
+    # Check that the input is 4D
+    if arr.ndim != 3:
+        raise ValueError("Input array must be 3-dimensional")
+
+    # Get the shape of the input array
+    a, b, c = arr.shape
+    
+    # Check the window shape
+    if len(window_shape) != 2:
+        raise ValueError("Window shape must have two dimensions (for the 1st and 2nd dimensions of the array)")
+
+    # Define the output shape: 
+    # For the 1st and 2nd dimensions, reduce based on window_shape
+    # Keep the 3rd and 4th dimensions the same
+    out_shape = (a - window_shape[0] + 1, b - window_shape[1] + 1, window_shape[0], window_shape[1], c)
+
+    # Define the strides: 
+    # Strides for the 1st and 2nd dimensions are modified to enable sliding windows
+    # Strides for the 3rd and 4th dimensions remain the same
+    strides = arr.strides[:2] + arr.strides[:2] + arr.strides[2:]
+
+    # Return the sliding window view using as_strided
+    return as_strided(arr, shape=out_shape, strides=strides)
+    
   def backprop(self, d_L_d_out, learn_rate):
     ''' 
     Performs a backward pass of the conv layer.
@@ -638,6 +681,20 @@ class Conv3x3(Layer):
       self.filters[:,:,:,:] -= learn_rate * d_L_d_filters[:,:,:,:]
     self.rotate_180degree(self.filters, self.num_filters)
     return self.test_8bit_caculate_previos_error(d_L_d_out)
+  
+  def new_conv_op(self,input,filters):
+    #(4,4,3,3,2)
+    #(3,3,2,8)
+    #mark_time = time.time()
+    windows_image = self.sliding_window_view_3d_reverse(input,(3,3))
+    #print("sliding_window_view_3d_reverse: ", time.time() - mark_time)
+    tempt = np.transpose(filters,(1,2,3,0))
+    #mark_time = time.time()
+    result = windows_image[:,:,:,:,:,np.newaxis]*tempt[np.newaxis,np.newaxis,:,:,:,:]
+    result = np.sum(result, axis = (2,3,4))
+    #print("Convo take: ", time.time() - mark_time)
+    #result =  np.sum(result, axis = (2,3))
+    return result
 '''
   Test
 '''
@@ -648,3 +705,14 @@ train_images = train_images[0:1000].astype(np.float32)
 print(conv.forward(train_images[0]))
 print("Test conv: ")
 print(conv.test_forward(train_images[0])) '''
+
+''' test_image = np.random.randn(64,64,8).astype(np.float32)
+conv = Conv3x3(num_filters=8,num_chan=8, name="First_Conv",type_conv="int8bit_forward"
+               , fd=None,src_buffer=None,dest_buffer=None,kernel_buffer=None,num_signal=SIG_TEST, need_caculate_backprop=False, need_update_weight=True)  
+mark_time = time.time()
+tempt = conv.new_conv_op(test_image)
+print("new_conv_op: ", time.time() - mark_time)
+mark_time = time.time()
+test = conv.float_forward(test_image)
+print("float_forward: ", time.time() - mark_time)
+print(np.amax(tempt - test)) '''
