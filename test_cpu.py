@@ -1,11 +1,12 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from conv import Conv3x3
 from maxpool import MaxPool2
 from softmax import Softmax
 from tempt_softmax import tempt_Softmax
 from flatten import Flatten
 from dense import Dense
+from numpy.lib.stride_tricks import as_strided
+import matplotlib.pyplot as plt
 import ctypes
 import numpy as np
 import os
@@ -14,7 +15,9 @@ import time
 import fcntl
 import struct
 import mmap
+import timeit
 import warnings
+import functools
 SET_PID_COMMAND = 0x40046401
 PRE_SRC_BUFF = 0x40046402
 PRE_KERNEL_BUFF = 0x40046403
@@ -173,32 +176,118 @@ np.save('test_label.npy',new_face_test_labels) '''
 ''''
   This for traning.
 '''
-print('Starting Training !')
+''' print('Starting Training !')
 mark_time = time.time()
 fit(Sequential=Sequential,train_images=new_face_train_image,train_labels=new_idex_face_train_label,epoch=10)
-print("Traing time take: ", time.time() - mark_time)
+print("Traing time of FPGA take: ", time.time() - mark_time)
+print(conv.backward_time)
+print(second_conv.backward_time)
+print(conv.forward_time)
+print(second_conv.forward_time)
 print("Accurancy on testing set: ",test_accurancy_model(Sequential=Sequential, testing_image=face_test_images, testing_label=face_test_labels))
-save_weight(Sequential)
+save_weight(Sequential) '''
 
 ''''
   Used for testing a pre train model.
 '''
-'''load_weight(Sequential)
+''' load_weight(Sequential)
+mark_time = time.time()
+print("Accurancy on testing set: ",test_accurancy_model(Sequential=Sequential, testing_image=face_test_images, testing_label=face_test_labels))
+print("Inference time: ", time.time() - mark_time)
+print(conv.forward_time)
+print(second_conv.forward_time)
+print(pool.forward_time)
+print(second_pool.forward_time) '''
+'''
+  Measure time of convolution
+'''
+def sliding_window_view_3d_reverse(arr, window_shape):
+    """
+    Create a sliding window view of a 4D input array along the 1st and 2nd dimensions.
+    
+    Parameters:
+        arr: The input 4D array (shape: (a, b, c, d)).
+        window_shape: Tuple specifying the shape of the sliding window for the 1st and 2nd dimensions.
+        
+    Returns:
+        A view of the array with sliding windows applied along the 1st and 2nd dimensions.
+    """
+    # Check that the input is 4D
+    if arr.ndim != 3:
+        raise ValueError("Input array must be 3-dimensional")
 
-np_display(face_test_images[6])
-out = face_test_images[6]
-out = out/255 - 0.5
-for layer in Sequential:
-    out = layer.forward(out)
-np_display(out[:,:,3])
+    # Get the shape of the input array
+    a, b, c = arr.shape
+    
+    # Check the window shape
+    if len(window_shape) != 2:
+        raise ValueError("Window shape must have two dimensions (for the 1st and 2nd dimensions of the array)")
 
-np_display(face_test_images[7])
-out = face_test_images[7]
-out = out/255 - 0.5
-for layer in Sequential:
-    out = layer.forward(out)
-np_display(out[:,:,3]) '''
+    # Define the output shape: 
+    # For the 1st and 2nd dimensions, reduce based on window_shape
+    # Keep the 3rd and 4th dimensions the same
+    out_shape = (a - window_shape[0] + 1, b - window_shape[1] + 1, window_shape[0], window_shape[1], c)
 
+    # Define the strides: 
+    # Strides for the 1st and 2nd dimensions are modified to enable sliding windows
+    # Strides for the 3rd and 4th dimensions remain the same
+    strides = arr.strides[:2] + arr.strides[:2] + arr.strides[2:]
+
+    # Return the sliding window view using as_strided
+    return as_strided(arr, shape=out_shape, strides=strides)
+def new_conv_op(input,filters):
+    windows_image = sliding_window_view_3d_reverse(input,(3,3))
+    tempt = np.transpose(filters,(1,2,3,0))
+    result = windows_image[:,:,:,:,:,np.newaxis]*tempt[np.newaxis,np.newaxis,:,:,:,:]
+    result = np.sum(result, axis = (2,3,4))
+    return result
+def graph_create(function,num_sample,num_circle,name):
+    kernel_size_axis = np.zeros(num_sample).astype(np.int32)
+    time_exe_axis = np.zeros(num_sample).astype(np.float32)
+    test_fitler = np.random.randint(-255, 255 ,size = (1,3,3,1))
+    for i in range(5,5 + num_sample):
+       test_image = np.random.randint(-1000, 1000, size = (i,i,1))
+       tempt = timeit.Timer(functools.partial(function, test_image,test_fitler)) 
+       total_time = (tempt.timeit(num_circle)/num_circle)
+       kernel_size_axis[i-5] = i
+       time_exe_axis[i-5] = total_time
+    np.save(name + "_kernel_size_axis",kernel_size_axis)
+    np.save(name + "_time_exe_axis", time_exe_axis)
+    plt.plot(kernel_size_axis, time_exe_axis, marker='o', linestyle='-', color='b', label='Data')
+    # Add labels and a title
+    plt.xlabel('X-axis Label')
+    plt.ylabel('Y-axis Label')
+    plt.title('Graph of Two 1D Matrices')
+    plt.legend()
+    # Show the plot
+    plt.grid(True)
+    plt.show()
+def graph_draw(kernel_size_axis_name, time_exe_axis_name):
+    kernel_size_axis = np.load(kernel_size_axis_name)
+    time_exe_axis = np.load(time_exe_axis_name)
+    plt.plot(kernel_size_axis, time_exe_axis, marker='o', linestyle='-', color='b', label='Data')
+    # Add labels and a title
+    plt.xlabel('X-axis Label')
+    plt.ylabel('Y-axis Label')
+    plt.title('Graph of Two 1D Matrices')
+    plt.legend()
+    # Show the plot
+    plt.grid(True)
+    plt.show()
+test_conv = Conv3x3(num_filters=1,num_chan=1, name="First_Conv",type_conv="new_conv"
+               , fd=None,src_buffer=None,dest_buffer=None,kernel_buffer=None,num_signal=SIG_TEST, need_caculate_backprop=False, need_update_weight=True)     
+'''
+test_image =  np.random.randn(1000,1000,1).astype(np.float32) / 9
+execution_time = timeit.Timer(functools.partial(test_conv.test_custom_conv2d, test_image,test_conv.filters))
+total_time = execution_time.timeit(20)
+print("Execution time of new_conv_op: ", total_time/20) '''
+
+#graph_create(test_conv.new_conv_op, 200, 100, "Test")
+
+graph_draw('./Test_kernel_size_axis.npy', './Test_time_exe_axis.npy')
+#graph_draw('./New_test_kernel_size_axis.npy', './New_test_time_exe_axis.npy')
+#print(f"Execution time for 1000 iterations: {execution_time:.6f} seconds")
+#print(f"Average time per iteration: {execution_time / 100:.6f} seconds")             
 conv.free_resource()
 second_conv.free_resource()
 

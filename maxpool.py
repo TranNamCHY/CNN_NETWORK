@@ -1,6 +1,7 @@
 import numpy as np
 from Layer import Layer
 import ctypes
+import time
 class MaxPool2(Layer):
   # A Max Pooling layer using a pool size of 2.
 
@@ -11,6 +12,7 @@ class MaxPool2(Layer):
       self.backprop = self.float_backprop
     if self.type_maxpool == "fpga_forward":
       self.backprop = self.fpga_backprop
+    self.forward_time = 0
   def iterate_regions(self, image):
     '''
     Generates non-overlapping 2x2 image regions to pool over.
@@ -29,11 +31,14 @@ class MaxPool2(Layer):
     max_coords = np.unravel_index(max_indices_flat, (im_region.shape[0], im_region.shape[1]))
     return max_coords
   
-  def forward(self, input):
+  def forward(self, input): 
+    mark_time = time.time()
     if self.type_maxpool == "float_forward":
-      return self.float_forward(input)
+      result = self.float_forward(input)
     if self.type_maxpool == "fpga_forward":
-      return self.fpga_forward(input)
+      result = self.fpga_forward(input)
+    self.forward_time += (time.time() - mark_time)
+    return result
   def float_forward(self, input):
     '''
     Performs a forward pass of the maxpool layer using the given input.

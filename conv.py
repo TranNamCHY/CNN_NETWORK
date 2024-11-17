@@ -60,6 +60,8 @@ class Conv3x3(Layer):
     self.type_conv = type_conv
     self.need_caculate_backprop = need_caculate_backprop
     self.need_update_weight = need_update_weight
+    self.forward_time = 0
+    self.backward_time = 0
     if self.type_conv == "fpga_forward":
       self.used_convo_op = self.fpga_backprop_custom_conv2d_8bit
     if self.type_conv == "int8bit_forward":
@@ -338,7 +340,7 @@ class Conv3x3(Layer):
                                                                                           kernel=conv2d_weight[num_filter, :, :, num_channel]))/(100*100))*(vector_abs_max_image[num_channel] * matrix_abs_max_fitler[num_filter, num_channel])
             tempt_sum += (time.time() - mark_time)
         final_result[:,:,num_filter] = result_accumulator
-    print("Total sum for my_covolution_op: ", tempt_sum)
+    #print("Total sum for my_covolution_op: ", tempt_sum)
     return final_result
   
   def test_fpga_backprop_custom_conv2d_8bit(self, input_tensor_image, tempt_conv2d_weight):
@@ -403,16 +405,19 @@ class Conv3x3(Layer):
     return final_result
 
   def forward(self, input):
+    mark_time = time.time()
     if self.type_conv == "fpga_forward":
-      return self.fpga_forward(input)
+      result = self.fpga_forward(input)
     if self.type_conv == "int8bit_forward":
-      return self.int8bit_forward(input)
+      result = self.int8bit_forward(input)
     if self.type_conv == "float32_forward":
-      return self.float_forward(input)
+      result = self.float_forward(input)
     if self.type_conv  == "test_fpga_forward":
-      return self.test_fpga_forward(input)
+      result = self.test_fpga_forward(input)
     if self.type_conv ==  "new_conv":
-      return self.new_con_forward(input)
+      result = self.new_con_forward(input)
+    self.forward_time += (time.time() - mark_time)
+    return result
   def save_weight(self):
     np.save(self.name + "_weight",self.filters)
   def load_weight_by_name(self):
@@ -654,46 +659,40 @@ class Conv3x3(Layer):
     return as_strided(arr, shape=out_shape, strides=strides)
     
   def backprop(self, d_L_d_out, learn_rate):
-    ''' 
-    Performs a backward pass of the conv layer.
-    - d_L_d_out is the loss gradient for this layer's outputs.
-    - learn_rate is a float.
-    '''
+    mark_time = time.time()
     if self.need_caculate_backprop == False:
       return None
-    mark_time = time.time()
     d_L_d_filters = np.zeros(self.filters.shape)
     tempt_image = np.zeros(self.last_input.shape, dtype = np.float32)
     tempt_image = self.last_input
     expanded_tempt_image = np.expand_dims(tempt_image, axis=3)
     expanded_tempt_image = np.tile(expanded_tempt_image, (1, 1, 1, self.num_filters))
     windows = self.sliding_window_view_4d_reverse(expanded_tempt_image,(3,3))
-    #mark_time = time.time()
     tempt = windows * d_L_d_out[:, :, np.newaxis, np.newaxis, np.newaxis, :]
-    #print(time.time() - mark_time)
     tempt = np.sum(tempt, axis=(0,1))
-    #print(time.time() - mark_time)
     d_L_d_filters = np.transpose(tempt, (3,0,1,2))
+
+    '''height = len(d_L_d_out[:,0,0])
+    width = len(d_L_d_out[0,:,0])
+    windows_image = self.sliding_window_view_3d_reverse(self.last_input,(height,width))
+    result = windows_image[:,:,:,:,np.newaxis,:] * d_L_d_out[np.newaxis,np.newaxis,:,:,:,np.newaxis] 
+    result = np.sum(result, axis = (2,3))
+    d_L_d_filters = np.transpose(result, (2,0,1,3))'''
+
     ''''
       Update filters.
     '''
     if self.need_update_weight == True:
       self.filters[:,:,:,:] -= learn_rate * d_L_d_filters[:,:,:,:]
     self.rotate_180degree(self.filters, self.num_filters)
-    return self.test_8bit_caculate_previos_error(d_L_d_out)
-  
+    result = self.test_8bit_caculate_previos_error(d_L_d_out)
+    self.backward_time += (time.time() - mark_time)
+    return result
   def new_conv_op(self,input,filters):
-    #(4,4,3,3,2)
-    #(3,3,2,8)
-    #mark_time = time.time()
     windows_image = self.sliding_window_view_3d_reverse(input,(3,3))
-    #print("sliding_window_view_3d_reverse: ", time.time() - mark_time)
     tempt = np.transpose(filters,(1,2,3,0))
-    #mark_time = time.time()
     result = windows_image[:,:,:,:,:,np.newaxis]*tempt[np.newaxis,np.newaxis,:,:,:,:]
     result = np.sum(result, axis = (2,3,4))
-    #print("Convo take: ", time.time() - mark_time)
-    #result =  np.sum(result, axis = (2,3))
     return result
 '''
   Test
@@ -706,13 +705,9 @@ print(conv.forward(train_images[0]))
 print("Test conv: ")
 print(conv.test_forward(train_images[0])) '''
 
-''' test_image = np.random.randn(64,64,8).astype(np.float32)
+''' test_image = np.random.randn(4,4,5).astype(np.float32)
+test_filters = np.random.randn(2,2,16).astype(np.float32)
 conv = Conv3x3(num_filters=8,num_chan=8, name="First_Conv",type_conv="int8bit_forward"
                , fd=None,src_buffer=None,dest_buffer=None,kernel_buffer=None,num_signal=SIG_TEST, need_caculate_backprop=False, need_update_weight=True)  
-mark_time = time.time()
-tempt = conv.new_conv_op(test_image)
-print("new_conv_op: ", time.time() - mark_time)
-mark_time = time.time()
-test = conv.float_forward(test_image)
-print("float_forward: ", time.time() - mark_time)
-print(np.amax(tempt - test)) '''
+t = conv.test_new_conv_op(test_image, test_filters)
+print(t.shape) '''

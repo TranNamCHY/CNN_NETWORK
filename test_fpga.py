@@ -13,6 +13,8 @@ import signal
 import time
 import fcntl
 import struct
+import timeit
+import functools
 import mmap
 import warnings
 SET_PID_COMMAND = 0x40046401
@@ -157,9 +159,52 @@ def np_display(image):
   plt.colorbar()  # Show color scale (optional)
   plt.show()
 
-mark_time = time.time()
+def test_accurancy_model(Sequential, testing_image, testing_label):
+  correct_answer = 0
+  total = 0
+  for i in range(0,len(testing_image)):
+    _,_,acc = forward(testing_image[i],testing_label[i],Sequential)
+    total += 1
+    correct_answer += acc
+  return correct_answer/total
+
+def graph_fpga_create(function,num_sample,num_circle,name,object):
+    kernel_size_axis = np.zeros(num_sample).astype(np.int32)
+    time_exe_axis = np.zeros(num_sample).astype(np.float32)
+    test_fitler = np.random.randint(-127, 127 ,size = (3,3)).astype(np.int8)
+    for i in range(5,5 + num_sample):
+       object.set_image_size(i,i)
+       object.reshape_mmap_buffer(i,i)
+       test_image = np.random.randint(-127, 127, size = (i,i)).astype(np.int8)
+       tempt = timeit.Timer(functools.partial(function, test_image,test_fitler)) 
+       total_time = (tempt.timeit(num_circle)/num_circle)
+       kernel_size_axis[i-5] = i
+       time_exe_axis[i-5] = total_time
+    np.save(name + "_kernel_size_axis",kernel_size_axis)
+    np.save(name + "_time_exe_axis", time_exe_axis)
+    ''' plt.plot(kernel_size_axis, time_exe_axis, marker='o', linestyle='-', color='b', label='Data')
+    # Add labels and a title
+    plt.xlabel('X-axis Label')
+    plt.ylabel('Y-axis Label')
+    plt.title('Graph of Two 1D Matrices')
+    plt.legend()
+    # Show the plot
+    plt.grid(True)
+    plt.show() '''
+
+'''
+  Used for training test
+'''  
+''' mark_time = time.time()
 fit(Sequential=Sequential,train_images=new_face_train_image,train_labels=new_idex_face_train_label,epoch=10)
 print("Traing time take: ", time.time() - mark_time)
+print("Accurancy on testing set: ",test_accurancy_model(Sequential=Sequential, testing_image=face_test_images, testing_label=face_test_labels)) '''
+'''
+  Execution time of conv2d module
+'''
+test_conv = Conv3x3(num_filters=1,num_chan=1, name="First_Conv",type_conv="fpga_forward"
+               , fd=fd,src_buffer=src_buffer,dest_buffer=dest_buffer,kernel_buffer=kernel_buffer,num_signal=SIG_TEST, need_caculate_backprop=False, need_update_weight=False)  
+graph_fpga_create(test_conv.my_covolution_op,50,100,"New_test",test_conv)
 
 conv.free_resource()
 second_conv.free_resource()
